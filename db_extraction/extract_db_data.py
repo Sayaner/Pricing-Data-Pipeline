@@ -42,7 +42,6 @@ def fetch_db_data():
                 connection
             )
 
-        db_df["Kod"] = db_df["Kod"].str.strip()
         return db_df
 
     except Exception as e:
