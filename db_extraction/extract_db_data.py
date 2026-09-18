@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL
@@ -22,8 +23,26 @@ engine = create_engine(connection_url)
 
 try:
     with engine.connect() as connection:
-        result = connection.execute(text("SELECT @@VERSION"))
-        print("Połączenie udane. Wersja SQL:")
-        print(result.scalar())
+        db_df = pd.read_sql(
+            text("""SELECT
+            TW.Twr_Kod AS [Kod],
+            TW.Twr_KodDostawcy AS [Kod_Dostawcy],
+            K.Knt_Kod AS [Dostawca],
+            MAX(CASE WHEN TC.TwC_TwCNumer = 2 THEN TC.TwC_Wartosc END) AS [Cena_Cennikowa],
+            MAX(CASE WHEN TC.TwC_TwCNumer = 7 THEN TC.TwC_Wartosc END) AS [Cena_CZK],
+            MAX(CASE WHEN TC.TwC_TwCNumer = 8 THEN TC.TwC_Wartosc END) AS [Cena_USD],
+            MAX(CASE WHEN TC.TwC_TwCNumer = 9 THEN TC.TwC_Wartosc END) AS [Cena_PLN],
+            MAX(CASE WHEN TC.TwC_TwCNumer = 10 THEN TC.TwC_Wartosc END) AS [Cena_EUR]
+            FROM CDN.Towary TW
+            LEFT JOIN CDN.TwrCeny TC ON TW.Twr_TwrId = TC.TwC_TwrID
+            LEFT JOIN CDN.Kontrahenci K ON TW.Twr_KntId = K.Knt_KntId
+            WHERE K.Knt_Kod = 'SIOT'
+            GROUP BY TW.Twr_Kod, TW.Twr_KodDostawcy, K.Knt_Kod"""),
+            connection
+        )
 except Exception as e:
     print(f"Błąd połączenia z bazą: {e}")
+
+
+print(db_df)
+
